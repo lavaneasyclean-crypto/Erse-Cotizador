@@ -116,6 +116,7 @@ Cada decisión arquitectural no-trivial está documentada como ADR en
 | [005](docs/ADR/005-app-shell-and-branding.md) | Route group `(app)`, sidebar layout, tema ERSE blue, Roboto, logo en PDF |
 | [006](docs/ADR/006-rut-validation.md) | Validación de RUT chileno (módulo-11) y normalización pre-DB |
 | [007](docs/ADR/007-url-driven-filters.md) | Filtros del listado en URL search params |
+| [008](docs/ADR/008-catalog-write-restrictions-and-input-hardening.md) | RLS de catálogo a admins, sanitización de búsqueda y filename del PDF |
 
 ## Reglas del proyecto
 

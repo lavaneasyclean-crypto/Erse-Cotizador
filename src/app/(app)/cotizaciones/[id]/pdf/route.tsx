@@ -4,6 +4,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 
 import { createClient } from '@/lib/supabase/server';
 import { CotizacionPdf, type CotizacionPdfData } from '@/lib/pdf/cotizacion-pdf';
+import { contentDispositionInline } from '@/lib/pdf/filename';
 
 export const runtime = 'nodejs';
 
@@ -80,12 +81,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   };
 
   const buffer = await renderToBuffer(<CotizacionPdf data={pdfData} />);
-  const filename = `Cotizacion_${cotizacion.numero}_${cotizacion.clientes.razon_social.replace(/\s+/g, '_')}.pdf`;
+  // razón social is user-controlled — never interpolate it into the header
+  // directly; use the sanitised RFC 5987 helper.
+  const baseName = `Cotizacion_${cotizacion.numero}_${cotizacion.clientes.razon_social}`;
 
   return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="${filename}"`,
+      'Content-Disposition': contentDispositionInline(baseName),
       'Cache-Control': 'no-store',
     },
   });

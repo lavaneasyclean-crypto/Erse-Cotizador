@@ -17,14 +17,18 @@ export default async function ClientesPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: clientes, error } = await supabase
-    .from('clientes')
-    .select(
-      'rut, razon_social, persona, direccion_despacho, condicion_de_pago, ciudad, contacto, email, giro',
-    )
-    .order('razon_social', { ascending: true });
+  const [{ data: clientes, error }, { data: profile }] = await Promise.all([
+    supabase
+      .from('clientes')
+      .select(
+        'rut, razon_social, persona, direccion_despacho, condicion_de_pago, ciudad, contacto, email, giro',
+      )
+      .order('razon_social', { ascending: true }),
+    supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+  ]);
 
-  if (error) throw new Error(`No pudimos cargar clientes: ${error.message}`);
+  if (error) throw new Error('No pudimos cargar los clientes.');
+  const isAdmin = profile?.is_admin ?? false;
 
   return (
     <main className="flex w-full flex-col gap-6 p-6">
@@ -42,12 +46,13 @@ export default async function ClientesPage() {
         <CardHeader>
           <CardTitle>Listado</CardTitle>
           <CardDescription>
-            El RUT funciona como llave única; una vez creado, sólo los demás campos son
-            editables.
+            {isAdmin
+              ? 'El RUT funciona como llave única; una vez creado, sólo los demás campos son editables.'
+              : 'Los vendedores pueden agregar nuevos clientes. Sólo administradores pueden editar los existentes.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ClientesTable clientes={clientes ?? []} />
+          <ClientesTable clientes={clientes ?? []} canEdit={isAdmin} />
         </CardContent>
       </Card>
     </main>

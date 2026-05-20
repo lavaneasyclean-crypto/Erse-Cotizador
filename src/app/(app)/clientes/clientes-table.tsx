@@ -41,7 +41,13 @@ const STORAGE_KEY = 'erse:clientes-table-widths:v1';
 type Widths = Record<ColumnKey, number>;
 const DEFAULT_WIDTHS = Object.fromEntries(COLUMNS.map((c) => [c.key, c.default])) as Widths;
 
-export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
+export function ClientesTable({
+  clientes,
+  canEdit,
+}: {
+  clientes: ClienteRow[];
+  canEdit: boolean;
+}) {
   const [query, setQuery] = React.useState('');
   const [widths, setWidths] = React.useState<Widths>(DEFAULT_WIDTHS);
 
@@ -154,7 +160,11 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
                     {c.ciudad ?? '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <EditClienteButton cliente={c} />
+                    {canEdit ? (
+                      <EditClienteButton cliente={c} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

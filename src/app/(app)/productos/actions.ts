@@ -54,6 +54,16 @@ export async function updateProductoAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Sesión expirada. Inicia sesión nuevamente.' };
 
+  // Catalog edits are admin-only as of migration 0005.
+  const { data: viewer } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (!viewer?.is_admin) {
+    return { error: 'Sólo administradores pueden editar productos.' };
+  }
+
   const codigo = formData.get('codigo_sku');
   if (typeof codigo !== 'string' || codigo === '') {
     return { error: 'Falta el código SKU del producto a editar' };
@@ -64,15 +74,19 @@ export async function updateProductoAction(
     return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
   }
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from('productos')
-    .update({
-      descripcion: parsed.data.descripcion,
-      precio_neto: parsed.data.precio_neto,
-    })
+    .update(
+      {
+        descripcion: parsed.data.descripcion,
+        precio_neto: parsed.data.precio_neto,
+      },
+      { count: 'exact' },
+    )
     .eq('codigo_sku', codigo);
 
-  if (error) return { error: error.message };
+  if (error) return { error: 'No se pudo guardar el producto.' };
+  if (count === 0) return { error: 'No se encontró el producto o no tienes permiso.' };
 
   revalidatePath('/productos');
   revalidatePath('/cotizaciones/nueva');

@@ -4,6 +4,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 
 import { createClient } from '@/lib/supabase/server';
 import { ManualPdf } from '@/lib/pdf/manual';
+import { contentDispositionInline } from '@/lib/pdf/filename';
 
 export const runtime = 'nodejs';
 
@@ -39,7 +40,7 @@ export async function GET() {
   return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': 'inline; filename="Manual_ERSE_Cotizaciones.pdf"',
+      'Content-Disposition': contentDispositionInline('Manual_ERSE_Cotizaciones'),
       'Cache-Control': 'no-store',
     },
   });

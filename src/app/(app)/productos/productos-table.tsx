@@ -46,7 +46,13 @@ const DEFAULT_WIDTHS = Object.fromEntries(COLUMNS.map((c) => [c.key, c.default])
 // reaches the last row.
 const VISIBLE_LIMIT = 100;
 
-export function ProductosTable({ productos }: { productos: ProductoRow[] }) {
+export function ProductosTable({
+  productos,
+  canEdit,
+}: {
+  productos: ProductoRow[];
+  canEdit: boolean;
+}) {
   const [query, setQuery] = React.useState('');
   const [widths, setWidths] = React.useState<Widths>(DEFAULT_WIDTHS);
 
@@ -146,7 +152,11 @@ export function ProductosTable({ productos }: { productos: ProductoRow[] }) {
                     ${formatCLP(p.precio_neto)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <EditProductoButton producto={p} />
+                    {canEdit ? (
+                      <EditProductoButton producto={p} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

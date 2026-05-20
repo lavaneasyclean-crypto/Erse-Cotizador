@@ -17,12 +17,16 @@ export default async function ProductosPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: productos, error } = await supabase
-    .from('productos')
-    .select('codigo_sku, descripcion, precio_neto')
-    .order('descripcion', { ascending: true });
+  const [{ data: productos, error }, { data: profile }] = await Promise.all([
+    supabase
+      .from('productos')
+      .select('codigo_sku, descripcion, precio_neto')
+      .order('descripcion', { ascending: true }),
+    supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+  ]);
 
-  if (error) throw new Error(`No pudimos cargar productos: ${error.message}`);
+  if (error) throw new Error('No pudimos cargar los productos.');
+  const isAdmin = profile?.is_admin ?? false;
 
   return (
     <main className="flex w-full flex-col gap-6 p-6">
@@ -40,12 +44,13 @@ export default async function ProductosPage() {
         <CardHeader>
           <CardTitle>Listado</CardTitle>
           <CardDescription>
-            El código SKU funciona como llave única; una vez creado sólo se pueden editar
-            descripción y precio.
+            {isAdmin
+              ? 'El código SKU funciona como llave única; una vez creado sólo se pueden editar descripción y precio.'
+              : 'Los vendedores pueden agregar nuevos productos. Sólo administradores pueden editar los existentes.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProductosTable productos={productos ?? []} />
+          <ProductosTable productos={productos ?? []} canEdit={isAdmin} />
         </CardContent>
       </Card>
     </main>

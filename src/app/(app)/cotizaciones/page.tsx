@@ -80,11 +80,15 @@ export default async function CotizacionesPage({
   if (hasta) query = query.lte('fecha', hasta);
   if (q) {
     // Pure-digit input → match the correlative number exactly.
-    // Anything else → ILIKE on cliente.razon_social via the inner-joined relation.
+    // Anything else → ILIKE on cliente.razon_social via the inner-joined
+    // relation. Escape ILIKE metacharacters (`\`, `%`, `_`) so a user-typed
+    // `%` doesn't expand into a full-table scan, and cap the length so the
+    // query stays bounded.
     if (/^\d+$/.test(q)) {
       query = query.eq('numero', Number(q));
     } else {
-      query = query.ilike('clientes.razon_social', `%${q}%`);
+      const escaped = q.slice(0, 80).replace(/[\\%_]/g, '\\$&');
+      query = query.ilike('clientes.razon_social', `%${escaped}%`);
     }
   }
 
