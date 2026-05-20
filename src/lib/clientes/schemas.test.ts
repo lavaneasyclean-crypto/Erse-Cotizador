@@ -75,16 +75,26 @@ describe('createClienteSchema', () => {
     }
   });
 
-  it('trims surrounding whitespace', () => {
+  it('trims surrounding whitespace and normalises the RUT', () => {
+    // Input has dots, spaces, and lowercase letters; output is the DB-friendly
+    // canonical form: no dots, single dash, uppercase K.
     const result = createClienteSchema.safeParse({
       rut: '  76.526.470-7 ',
       razon_social: '  VINA VENTISQUERO LIMITADA  ',
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.rut).toBe('76.526.470-7');
+      expect(result.data.rut).toBe('76526470-7');
       expect(result.data.razon_social).toBe('VINA VENTISQUERO LIMITADA');
     }
+  });
+
+  it('rejects a RUT with the wrong check digit', () => {
+    const result = createClienteSchema.safeParse({
+      rut: '76.526.470-0', // valid format, invalid DV
+      razon_social: 'X',
+    });
+    expect(result.success).toBe(false);
   });
 });
 

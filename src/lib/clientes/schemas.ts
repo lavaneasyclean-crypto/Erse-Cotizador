@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+import { isValidRut, normalizeRut } from '@/lib/rut/rut';
+
+// Chilean RUT — validated against the modulo-11 check-digit algorithm and
+// normalised before storage (no dots, dash kept, uppercase K).
+const rut = z
+  .string()
+  .trim()
+  .min(1, { message: 'El RUT es obligatorio' })
+  .refine((value) => isValidRut(value), {
+    message: 'RUT inválido (verifica el dígito verificador)',
+  })
+  .transform((value) => normalizeRut(value));
+
 // Optional free-text field: trims, then converts empty string to null so the
 // DB stores SQL NULL instead of an empty string. `nullish()` makes the key
 // itself optional in the object — missing/null/undefined all map to null.
@@ -29,7 +42,7 @@ const optionalEmail = z
   });
 
 export const createClienteSchema = z.object({
-  rut: z.string().trim().min(1, { message: 'El RUT es obligatorio' }),
+  rut,
   razon_social: z
     .string()
     .trim()

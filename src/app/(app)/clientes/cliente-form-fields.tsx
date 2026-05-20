@@ -3,6 +3,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { formatRut } from '@/lib/rut/rut';
 
 export type ClienteDefaults = {
   rut?: string;
@@ -41,6 +42,12 @@ export function ClienteFormFields({
           do NOT submit their value, so the update action wouldn't know which
           row to target.
         */}
+        {/*
+          Auto-format the RUT on blur (e.g. "776380857" → "77.638.085-7"). We
+          don't reformat on every keystroke so the user can edit freely; the
+          server-side Zod schema normalises again before saving so the DB
+          value stays canonical regardless of what the user types.
+        */}
         <Input
           id={`${idPrefix}-rut`}
           name="rut"
@@ -49,6 +56,13 @@ export function ClienteFormFields({
           required
           disabled={disabled && rutEditable}
           readOnly={!rutEditable}
+          onBlur={
+            rutEditable
+              ? (e) => {
+                  e.currentTarget.value = formatRut(e.currentTarget.value);
+                }
+              : undefined
+          }
           className={!rutEditable ? 'cursor-not-allowed bg-muted/40 opacity-70' : undefined}
           placeholder="77.638.085-7"
         />
@@ -56,7 +70,11 @@ export function ClienteFormFields({
           <p className="text-xs text-muted-foreground">
             El RUT no se puede cambiar (es la llave del cliente).
           </p>
-        ) : null}
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Validamos el dígito verificador. Personas y empresas.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

@@ -22,27 +22,74 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { computeTotals } from '@/lib/cotizaciones/totals';
 import { formatCLP, formatFecha } from '@/lib/format/format';
+import { ESTADOS } from '@/lib/cotizaciones/estado-schema';
+import type { EstadoCotizacion } from '@/lib/supabase/types';
 
 import { EstadoSelector } from './[id]/estado-selector';
+import { CotizacionesFilters } from './cotizaciones-filters';
 
 export const metadata = {
   title: 'Cotizaciones — ERSE',
 };
 
-export default async function CotizacionesPage() {
+type FilterParams = {
+  estado?: string;
+  desde?: string;
+  hasta?: string;
+  q?: string;
+};
+
+function parseEstados(raw: string | undefined): EstadoCotizacion[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s): s is EstadoCotizacion => (ESTADOS as readonly string[]).includes(s));
+}
+
+export default async function CotizacionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<FilterParams>;
+}) {
+  const params = await searchParams;
+  const selectedEstados = parseEstados(params.estado);
+  const desde = params.desde?.trim() || null;
+  const hasta = params.hasta?.trim() || null;
+  const q = params.q?.trim() || null;
+  const hasFilters =
+    selectedEstados.length > 0 || desde !== null || hasta !== null || q !== null;
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  let query = supabase
+    .from('cotizaciones')
+    .select(
+      // !inner switches the embedded clientes to an INNER JOIN so we can
+      // filter parent rows by cliente.razon_social.
+      'id, numero, fecha, estado, vendedor_id, cliente_rut, clientes!inner(razon_social), cotizacion_items(precio_unitario, cantidad, descuento_porcentaje)',
+    )
+    .order('numero', { ascending: false });
+
+  if (selectedEstados.length > 0) query = query.in('estado', selectedEstados);
+  if (desde) query = query.gte('fecha', desde);
+  if (hasta) query = query.lte('fecha', hasta);
+  if (q) {
+    // Pure-digit input → match the correlative number exactly.
+    // Anything else → ILIKE on cliente.razon_social via the inner-joined relation.
+    if (/^\d+$/.test(q)) {
+      query = query.eq('numero', Number(q));
+    } else {
+      query = query.ilike('clientes.razon_social', `%${q}%`);
+    }
+  }
+
   const [{ data: cotizaciones, error }, { data: profile }] = await Promise.all([
-    supabase
-      .from('cotizaciones')
-      .select(
-        'id, numero, fecha, estado, vendedor_id, cliente_rut, clientes(razon_social), cotizacion_items(precio_unitario, cantidad, descuento_porcentaje)',
-      )
-      .order('numero', { ascending: false }),
+    query,
     supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
   ]);
 
@@ -63,7 +110,7 @@ export default async function CotizacionesPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
+    <main className="flex w-full flex-col gap-6 p-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cotizaciones</h1>
@@ -76,18 +123,26 @@ export default async function CotizacionesPage() {
         </Link>
       </header>
 
+      <CotizacionesFilters />
+
       {!cotizaciones || cotizaciones.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Sin cotizaciones todavía</CardTitle>
+            <CardTitle>
+              {hasFilters ? 'Sin coincidencias' : 'Sin cotizaciones todavía'}
+            </CardTitle>
             <CardDescription>
-              Cuando crees la primera, aparecerá aquí con su número correlativo (parte en 5527).
+              {hasFilters
+                ? 'Ninguna cotización coincide con los filtros activos. Ajusta los criterios o presiona "Limpiar".'
+                : 'Cuando crees la primera, aparecerá aquí con su número correlativo (parte en 5527).'}
             </CardDescription>
-            <CardAction>
-              <Link href="/cotizaciones/nueva" className={buttonVariants()}>
-                Crear la primera
-              </Link>
-            </CardAction>
+            {!hasFilters ? (
+              <CardAction>
+                <Link href="/cotizaciones/nueva" className={buttonVariants()}>
+                  Crear la primera
+                </Link>
+              </CardAction>
+            ) : null}
           </CardHeader>
         </Card>
       ) : (
@@ -160,6 +215,12 @@ export default async function CotizacionesPage() {
           </CardContent>
         </Card>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        {cotizaciones?.length ?? 0}{' '}
+        {cotizaciones?.length === 1 ? 'cotización' : 'cotizaciones'}
+        {hasFilters ? ' (filtradas)' : ''}
+      </p>
     </main>
   );
 }

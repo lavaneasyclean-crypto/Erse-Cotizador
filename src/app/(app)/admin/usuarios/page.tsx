@@ -39,7 +39,7 @@ export default async function AdminUsuariosPage() {
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
+    <main className="flex w-full flex-col gap-6 p-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Usuarios</h1>
         <p className="text-muted-foreground">

@@ -27,7 +27,7 @@ export default async function ClientesPage() {
   if (error) throw new Error(`No pudimos cargar clientes: ${error.message}`);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
+    <main className="flex w-full flex-col gap-6 p-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
