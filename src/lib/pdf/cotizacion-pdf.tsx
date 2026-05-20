@@ -1,7 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
 import { computeTotals, lineTotal, unitNet } from '@/lib/cotizaciones/totals';
-import { formatCLP, formatFecha } from '@/lib/format/format';
+import { formatCantidad, formatCLP, formatFecha } from '@/lib/format/format';
 
 export type CotizacionPdfData = {
   numero: number;
@@ -281,7 +281,7 @@ export function CotizacionPdf({ data }: { data: CotizacionPdfData }) {
               <Text style={styles.cellNum}>{item.posicion}</Text>
               <Text style={styles.cellCode}>{item.codigo_sku}</Text>
               <Text style={styles.cellDesc}>{item.descripcion}</Text>
-              <Text style={styles.cellQty}>{formatCLP(item.cantidad)}</Text>
+              <Text style={styles.cellQty}>{formatCantidad(item.cantidad)}</Text>
               <Text style={styles.cellPrice}>{formatCLP(unitNet(toQuoteLine(item)))}</Text>
               <Text style={styles.cellTotal}>{formatCLP(lineTotal(toQuoteLine(item)))}</Text>
             </View>

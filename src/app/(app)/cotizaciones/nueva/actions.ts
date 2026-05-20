@@ -1,34 +1,52 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
 import { createClient } from '@/lib/supabase/server';
 import { createCotizacionSchema } from '@/lib/cotizaciones/schemas';
 
 export type CreateCotizacionResult = { error: string } | undefined;
 
+const MAX_ITEMS_PAYLOAD = 200_000; // 200 KB of JSON is generous for a quote
+
 export async function createCotizacionAction(
   _previousState: CreateCotizacionResult,
   formData: FormData,
 ): Promise<CreateCotizacionResult> {
-  const rawItems = formData.get('items');
-  const parsed = createCotizacionSchema.safeParse({
-    cliente_rut: formData.get('cliente_rut'),
-    vencimiento: formData.get('vencimiento') ?? undefined,
-    condicion_pago: formData.get('condicion_pago') ?? undefined,
-    notas: formData.get('notas') ?? undefined,
-    items: typeof rawItems === 'string' ? JSON.parse(rawItems) : [],
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
-  }
-
+  // Auth first — never run JSON.parse on untrusted input before knowing who
+  // is asking. Keeps anonymous POST 500s out of the logs and aligns with the
+  // other server actions.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Sesión expirada. Inicia sesión nuevamente.' };
+
+  const rawItems = formData.get('items');
+  let itemsArray: unknown = [];
+  if (typeof rawItems === 'string' && rawItems.length > 0) {
+    if (rawItems.length > MAX_ITEMS_PAYLOAD) {
+      return { error: 'La cotización es demasiado grande.' };
+    }
+    try {
+      itemsArray = JSON.parse(rawItems);
+    } catch {
+      return { error: 'No pudimos leer los items. Refresca e intenta de nuevo.' };
+    }
+  }
+
+  const parsed = createCotizacionSchema.safeParse({
+    cliente_rut: formData.get('cliente_rut'),
+    vencimiento: formData.get('vencimiento') ?? undefined,
+    condicion_pago: formData.get('condicion_pago') ?? undefined,
+    notas: formData.get('notas') ?? undefined,
+    items: itemsArray,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' };
+  }
 
   const { data: header, error: headerError } = await supabase
     .from('cotizaciones')
@@ -43,7 +61,7 @@ export async function createCotizacionAction(
     .single();
 
   if (headerError || !header) {
-    return { error: headerError?.message ?? 'No se pudo crear la cotización' };
+    return { error: 'No se pudo crear la cotización.' };
   }
 
   const itemsToInsert = parsed.data.items.map((item, index) => ({
@@ -59,11 +77,13 @@ export async function createCotizacionAction(
   const { error: itemsError } = await supabase.from('cotizacion_items').insert(itemsToInsert);
 
   if (itemsError) {
-    // Best-effort rollback: delete the orphan header. If this fails too, the
-    // user will see the empty quote in the listing and can edit/delete manually.
+    // Best-effort rollback: delete the orphan header. If this fails too the
+    // user will see the empty quote in the listing and can re-create.
     await supabase.from('cotizaciones').delete().eq('id', header.id);
-    return { error: `No se pudieron guardar los items: ${itemsError.message}` };
+    return { error: 'No se pudieron guardar los items.' };
   }
 
+  revalidatePath('/cotizaciones');
+  revalidatePath('/dashboard');
   redirect(`/cotizaciones/${header.id}`);
 }

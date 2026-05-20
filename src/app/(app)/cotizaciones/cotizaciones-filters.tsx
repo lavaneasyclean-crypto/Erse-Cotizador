@@ -10,25 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { ESTADOS } from '@/lib/cotizaciones/estado-schema';
+import { ESTADO_CLASSES, ESTADO_LABEL } from '@/lib/cotizaciones/estado-ui';
 import type { EstadoCotizacion } from '@/lib/supabase/types';
-
-const ESTADO_LABEL: Record<EstadoCotizacion, string> = {
-  borrador: 'Borrador',
-  enviada: 'Enviada',
-  aprobada: 'Aprobada',
-  rechazada: 'Rechazada',
-};
-
-const ESTADO_CLASSES: Record<EstadoCotizacion, string> = {
-  borrador:
-    'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300',
-  enviada:
-    'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300',
-  aprobada:
-    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400',
-  rechazada:
-    'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-400',
-};
 
 export function CotizacionesFilters() {
   const router = useRouter();

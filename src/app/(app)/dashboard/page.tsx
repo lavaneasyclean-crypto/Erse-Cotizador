@@ -22,29 +22,16 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { computeTotals } from '@/lib/cotizaciones/totals';
 import { formatCLP, formatFecha } from '@/lib/format/format';
+import {
+  ESTADO_BAR_CLASS,
+  ESTADO_CLASSES,
+  ESTADO_LABEL,
+} from '@/lib/cotizaciones/estado-ui';
 import { cn } from '@/lib/utils';
 import type { EstadoCotizacion } from '@/lib/supabase/types';
 
 export const metadata = {
   title: 'Dashboard — ERSE Cotizaciones',
-};
-
-const ESTADO_LABEL: Record<EstadoCotizacion, string> = {
-  borrador: 'Borrador',
-  enviada: 'Enviada',
-  aprobada: 'Aprobada',
-  rechazada: 'Rechazada',
-};
-
-const ESTADO_CLASSES: Record<EstadoCotizacion, string> = {
-  borrador:
-    'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300',
-  enviada:
-    'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300',
-  aprobada:
-    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400',
-  rechazada:
-    'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-400',
 };
 
 function startOfMonthISO(): string {
@@ -187,10 +174,7 @@ export default async function DashboardPage() {
                     <div
                       className={cn(
                         'h-full transition-all',
-                        estado === 'borrador' && 'bg-slate-400',
-                        estado === 'enviada' && 'bg-sky-500',
-                        estado === 'aprobada' && 'bg-emerald-500',
-                        estado === 'rechazada' && 'bg-rose-500',
+                        ESTADO_BAR_CLASS[estado],
                       )}
                       style={{ width: `${pct}%` }}
                     />

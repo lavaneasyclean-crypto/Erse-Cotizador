@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/table';
 import { createClient } from '@/lib/supabase/server';
 import { computeTotals, lineTotal } from '@/lib/cotizaciones/totals';
-import { formatCLP, formatFecha } from '@/lib/format/format';
+import { formatCantidad, formatCLP, formatFecha } from '@/lib/format/format';
 
 import { EstadoSelector } from './estado-selector';
 
@@ -157,7 +157,7 @@ export default async function CotizacionDetailPage({
                   <TableCell className="font-mono text-xs">{item.codigo_sku}</TableCell>
                   <TableCell>{item.descripcion}</TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatCLP(item.cantidad)}
+                    {formatCantidad(item.cantidad)}
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     {formatCLP(item.precio_unitario)}

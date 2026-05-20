@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { formatCLP, formatFecha } from '@/lib/format/format';
+import { formatCLP, formatCantidad, formatFecha } from '@/lib/format/format';
 
 describe('formatCLP', () => {
   it('formats with dot as thousand separator and no currency symbol (PDF style)', () => {
@@ -25,6 +25,37 @@ describe('formatCLP', () => {
   it('renders negative amounts with a leading minus', () => {
     // Used by credit notes / reversals later; spec it now.
     expect(formatCLP(-1_500)).toBe('-1.500');
+  });
+});
+
+describe('formatCantidad', () => {
+  it('formats whole numbers like CLP but without decimals (no rounding)', () => {
+    expect(formatCantidad(1)).toBe('1');
+    expect(formatCantidad(10)).toBe('10');
+    expect(formatCantidad(1_500)).toBe('1.500');
+  });
+
+  it('preserves decimals using a Chilean comma', () => {
+    // 2.5 metres of cable must NOT round to 3 — the PDF invariant
+    // PRECIO × Cantidad = TOTAL breaks otherwise (see ADR 003).
+    expect(formatCantidad(2.5)).toBe('2,5');
+    expect(formatCantidad(0.75)).toBe('0,75');
+    expect(formatCantidad(1_500.5)).toBe('1.500,5');
+  });
+
+  it('trims trailing zeros to keep the display tidy', () => {
+    expect(formatCantidad(2.5)).toBe('2,5');
+    expect(formatCantidad(2.0)).toBe('2');
+  });
+
+  it('caps decimals at 3 places so floating point noise does not leak', () => {
+    expect(formatCantidad(1 / 3)).toBe('0,333');
+    expect(formatCantidad(2.123456)).toBe('2,123');
+  });
+
+  it('handles zero and negative quantities', () => {
+    expect(formatCantidad(0)).toBe('0');
+    expect(formatCantidad(-1.5)).toBe('-1,5');
   });
 });
 
