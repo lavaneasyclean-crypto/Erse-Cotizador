@@ -24,9 +24,18 @@ export type Database = {
           email: string | null;
           giro: string | null;
           created_at: string;
+          updated_at: string;
+          updated_by: string | null;
+          activo: boolean;
         };
-        Insert: Omit<Database['public']['Tables']['clientes']['Row'], 'created_at'> & {
+        Insert: Omit<
+          Database['public']['Tables']['clientes']['Row'],
+          'created_at' | 'updated_at' | 'updated_by' | 'activo'
+        > & {
           created_at?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          activo?: boolean;
         };
         Update: Partial<Database['public']['Tables']['clientes']['Row']>;
         Relationships: [];
@@ -37,8 +46,18 @@ export type Database = {
           codigo_sku: string;
           descripcion: string;
           precio_neto: number;
+          updated_at: string;
+          updated_by: string | null;
+          activo: boolean;
         };
-        Insert: Database['public']['Tables']['productos']['Row'];
+        Insert: Omit<
+          Database['public']['Tables']['productos']['Row'],
+          'updated_at' | 'updated_by' | 'activo'
+        > & {
+          updated_at?: string;
+          updated_by?: string | null;
+          activo?: boolean;
+        };
         Update: Partial<Database['public']['Tables']['productos']['Row']>;
         Relationships: [];
       };

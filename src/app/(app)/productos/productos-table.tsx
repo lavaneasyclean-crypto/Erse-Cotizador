@@ -19,6 +19,7 @@ export type ProductoRow = {
   codigo_sku: string;
   descripcion: string;
   precio_neto: number;
+  activo: boolean;
 };
 
 type ColumnKey = 'codigo_sku' | 'descripcion' | 'precio_neto' | 'acciones';
@@ -143,10 +144,15 @@ export function ProductosTable({
               </TableRow>
             ) : (
               visible.map((p) => (
-                <TableRow key={p.codigo_sku}>
+                <TableRow key={p.codigo_sku} className={!p.activo ? 'opacity-60' : undefined}>
                   <TableCell className="truncate font-mono text-xs">{p.codigo_sku}</TableCell>
                   <TableCell className="truncate" title={p.descripcion}>
                     {p.descripcion}
+                    {!p.activo ? (
+                      <span className="ml-2 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                        archivado
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell className="text-right font-mono">
                     ${formatCLP(p.precio_neto)}

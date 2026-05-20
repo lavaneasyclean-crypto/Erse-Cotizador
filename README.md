@@ -117,6 +117,8 @@ Cada decisión arquitectural no-trivial está documentada como ADR en
 | [006](docs/ADR/006-rut-validation.md) | Validación de RUT chileno (módulo-11) y normalización pre-DB |
 | [007](docs/ADR/007-url-driven-filters.md) | Filtros del listado en URL search params |
 | [008](docs/ADR/008-catalog-write-restrictions-and-input-hardening.md) | RLS de catálogo a admins, sanitización de búsqueda y filename del PDF |
+| [009](docs/ADR/009-pdf-module-layout.md) | Estructura del módulo `lib/pdf` |
+| [010](docs/ADR/010-csp-deferred.md) | Content-Security-Policy deferida intencionalmente |
 
 ## Reglas del proyecto
 

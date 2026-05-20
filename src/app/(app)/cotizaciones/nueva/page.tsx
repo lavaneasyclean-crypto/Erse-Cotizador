@@ -42,14 +42,19 @@ export default async function NuevaCotizacionPage({
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  // Archived (activo = false) clientes and productos are excluded from the
+  // pickers so vendors can't accidentally quote with stale records. They
+  // still appear in past cotizaciones via the snapshot/FK lookup.
   const [{ data: clientes }, { data: productos }, { data: pastQuotes }] = await Promise.all([
     supabase
       .from('clientes')
       .select('rut, razon_social, condicion_de_pago')
+      .eq('activo', true)
       .order('razon_social', { ascending: true }),
     supabase
       .from('productos')
       .select('codigo_sku, descripcion, precio_neto')
+      .eq('activo', true)
       .order('descripcion', { ascending: true }),
     supabase
       .from('cotizaciones')

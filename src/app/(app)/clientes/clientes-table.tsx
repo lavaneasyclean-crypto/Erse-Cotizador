@@ -24,6 +24,7 @@ export type ClienteRow = {
   contacto: string | null;
   email: string | null;
   giro: string | null;
+  activo: boolean;
 };
 
 type ColumnKey = 'razon_social' | 'rut' | 'contacto' | 'ciudad' | 'acciones';
@@ -141,9 +142,14 @@ export function ClientesTable({
               </TableRow>
             ) : (
               filtered.map((c) => (
-                <TableRow key={c.rut}>
+                <TableRow key={c.rut} className={!c.activo ? 'opacity-60' : undefined}>
                   <TableCell className="truncate font-medium" title={c.razon_social}>
                     {c.razon_social}
+                    {!c.activo ? (
+                      <span className="ml-2 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                        archivado
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell className="truncate font-mono text-xs">{c.rut}</TableCell>
                   <TableCell className="truncate">

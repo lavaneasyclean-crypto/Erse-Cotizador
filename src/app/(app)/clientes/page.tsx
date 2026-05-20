@@ -21,7 +21,7 @@ export default async function ClientesPage() {
     supabase
       .from('clientes')
       .select(
-        'rut, razon_social, persona, direccion_despacho, condicion_de_pago, ciudad, contacto, email, giro',
+        'rut, razon_social, persona, direccion_despacho, condicion_de_pago, ciudad, contacto, email, giro, activo',
       )
       .order('razon_social', { ascending: true }),
     supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),

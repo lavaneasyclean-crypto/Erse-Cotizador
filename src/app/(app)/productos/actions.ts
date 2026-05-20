@@ -80,6 +80,9 @@ export async function updateProductoAction(
       {
         descripcion: parsed.data.descripcion,
         precio_neto: parsed.data.precio_neto,
+        // updated_at is set by the trigger; updated_by reflects the human
+        // caller for audit. See migration 0006.
+        updated_by: user.id,
       },
       { count: 'exact' },
     )
@@ -91,4 +94,43 @@ export async function updateProductoAction(
   revalidatePath('/productos');
   revalidatePath('/cotizaciones/nueva');
   return { success: 'Producto actualizado.' };
+}
+
+export async function toggleProductoActivoAction(
+  _previousState: ProductoActionResult,
+  formData: FormData,
+): Promise<ProductoActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sesión expirada. Inicia sesión nuevamente.' };
+
+  const { data: viewer } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (!viewer?.is_admin) {
+    return { error: 'Sólo administradores pueden archivar productos.' };
+  }
+
+  const codigo = formData.get('codigo_sku');
+  const next = formData.get('activo');
+  if (typeof codigo !== 'string' || codigo === '') {
+    return { error: 'Falta el código SKU' };
+  }
+  const activo = next === 'true';
+
+  const { error, count } = await supabase
+    .from('productos')
+    .update({ activo, updated_by: user.id }, { count: 'exact' })
+    .eq('codigo_sku', codigo);
+
+  if (error) return { error: 'No se pudo actualizar el producto.' };
+  if (count === 0) return { error: 'Producto no encontrado.' };
+
+  revalidatePath('/productos');
+  revalidatePath('/cotizaciones/nueva');
+  return { success: activo ? 'Producto restaurado.' : 'Producto archivado.' };
 }

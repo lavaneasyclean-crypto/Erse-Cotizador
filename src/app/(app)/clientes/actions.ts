@@ -110,6 +110,9 @@ export async function updateClienteAction(
         contacto: parsed.data.contacto,
         email: parsed.data.email,
         giro: parsed.data.giro,
+        // updated_at is set by the trigger; updated_by is set here so it
+        // reflects the human caller, not the database role.
+        updated_by: user.id,
       },
       { count: 'exact' },
     )
@@ -121,4 +124,43 @@ export async function updateClienteAction(
   revalidatePath('/clientes');
   revalidatePath('/cotizaciones/nueva');
   return { success: `Cliente actualizado.` };
+}
+
+export async function toggleClienteActivoAction(
+  _previousState: ClienteActionResult,
+  formData: FormData,
+): Promise<ClienteActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Sesión expirada. Inicia sesión nuevamente.' };
+
+  const { data: viewer } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (!viewer?.is_admin) {
+    return { error: 'Sólo administradores pueden archivar clientes.' };
+  }
+
+  const rawRut = formData.get('rut');
+  const next = formData.get('activo');
+  if (typeof rawRut !== 'string' || rawRut === '') {
+    return { error: 'Falta el RUT del cliente' };
+  }
+  const activo = next === 'true';
+
+  const { error, count } = await supabase
+    .from('clientes')
+    .update({ activo, updated_by: user.id }, { count: 'exact' })
+    .eq('rut', normalizeRut(rawRut));
+
+  if (error) return { error: 'No se pudo actualizar el cliente.' };
+  if (count === 0) return { error: 'Cliente no encontrado.' };
+
+  revalidatePath('/clientes');
+  revalidatePath('/cotizaciones/nueva');
+  return { success: activo ? 'Cliente restaurado.' : 'Cliente archivado.' };
 }

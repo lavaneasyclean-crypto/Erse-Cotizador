@@ -20,7 +20,7 @@ export default async function ProductosPage() {
   const [{ data: productos, error }, { data: profile }] = await Promise.all([
     supabase
       .from('productos')
-      .select('codigo_sku, descripcion, precio_neto')
+      .select('codigo_sku, descripcion, precio_neto, activo')
       .order('descripcion', { ascending: true }),
     supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
   ]);
