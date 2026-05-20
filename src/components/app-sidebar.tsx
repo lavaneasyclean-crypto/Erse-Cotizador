@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -140,6 +141,16 @@ export function AppSidebar({
 
         {/* User footer */}
         <div className="border-t border-sidebar-border p-3">
+          <a
+            href="/manual"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-1 flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-foreground"
+          >
+            <BookOpen className="size-5 shrink-0" />
+            <span className="flex-1">Manual de uso</span>
+            <span className="text-xs text-muted-foreground">PDF</span>
+          </a>
           <Link
             href="/perfil"
             className={cn(
