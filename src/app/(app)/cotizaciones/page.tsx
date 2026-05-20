@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ChevronRight } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import {
   Card,
@@ -22,29 +22,11 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { computeTotals } from '@/lib/cotizaciones/totals';
 import { formatCLP, formatFecha } from '@/lib/format/format';
-import type { EstadoCotizacion } from '@/lib/supabase/types';
+
+import { EstadoSelector } from './[id]/estado-selector';
 
 export const metadata = {
   title: 'Cotizaciones — ERSE',
-};
-
-const ESTADO_LABEL: Record<EstadoCotizacion, string> = {
-  borrador: 'Borrador',
-  enviada: 'Enviada',
-  aprobada: 'Aprobada',
-  rechazada: 'Rechazada',
-};
-
-// Status colours include dark: variants per AGENTS.md §9.
-const ESTADO_CLASSES: Record<EstadoCotizacion, string> = {
-  borrador:
-    'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300',
-  enviada:
-    'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300',
-  aprobada:
-    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400',
-  rechazada:
-    'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-400',
 };
 
 export default async function CotizacionesPage() {
@@ -54,16 +36,21 @@ export default async function CotizacionesPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: cotizaciones, error } = await supabase
-    .from('cotizaciones')
-    .select(
-      'id, numero, fecha, estado, vendedor_id, cliente_rut, clientes(razon_social), cotizacion_items(precio_unitario, cantidad, descuento_porcentaje)',
-    )
-    .order('numero', { ascending: false });
+  const [{ data: cotizaciones, error }, { data: profile }] = await Promise.all([
+    supabase
+      .from('cotizaciones')
+      .select(
+        'id, numero, fecha, estado, vendedor_id, cliente_rut, clientes(razon_social), cotizacion_items(precio_unitario, cantidad, descuento_porcentaje)',
+      )
+      .order('numero', { ascending: false }),
+    supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+  ]);
 
   if (error) {
     throw new Error(`No pudimos cargar cotizaciones: ${error.message}`);
   }
+
+  const isAdmin = profile?.is_admin ?? false;
 
   const vendedorIds = Array.from(new Set((cotizaciones ?? []).map((c) => c.vendedor_id)));
   const vendedorNames = new Map<string, string>();
@@ -76,7 +63,7 @@ export default async function CotizacionesPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-6xl flex-col gap-6 p-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cotizaciones</h1>
@@ -126,25 +113,45 @@ export default async function CotizacionesPage() {
                       descuentoPorcentaje: item.descuento_porcentaje,
                     })),
                   );
+                  const canEdit = c.vendedor_id === user.id || isAdmin;
                   return (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-mono">{c.numero}</TableCell>
-                      <TableCell>
+                    // `group` + `relative` enable the stretched-link pattern:
+                    // a single absolutely-positioned Link covers the whole row
+                    // for click navigation. Interactive children (the estado
+                    // selector) sit on a higher z-index so they receive their
+                    // own clicks instead of triggering the row link.
+                    <TableRow
+                      key={c.id}
+                      className="group relative cursor-pointer transition-colors hover:bg-muted/40"
+                    >
+                      <TableCell className="font-mono">
                         <Link
                           href={`/cotizaciones/${c.id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {c.clientes?.razon_social ?? c.cliente_rut}
-                        </Link>
+                          aria-label={`Abrir cotización Nº ${c.numero}`}
+                          className="absolute inset-0 z-0"
+                        />
+                        <span className="relative">{c.numero}</span>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {c.clientes?.razon_social ?? c.cliente_rut}
                       </TableCell>
                       <TableCell>{formatFecha(c.fecha)}</TableCell>
                       <TableCell>{vendedorNames.get(c.vendedor_id) ?? '—'}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={ESTADO_CLASSES[c.estado]}>
-                          {ESTADO_LABEL[c.estado]}
-                        </Badge>
+                        <div className="relative z-10 inline-block">
+                          <EstadoSelector
+                            cotizacionId={c.id}
+                            current={c.estado}
+                            canEdit={canEdit}
+                          />
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono">${formatCLP(total)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 font-mono">
+                          <span>${formatCLP(total)}</span>
+                          <ChevronRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}

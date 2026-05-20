@@ -1,4 +1,4 @@
-import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 
 import { computeTotals, lineTotal, unitNet } from '@/lib/cotizaciones/totals';
 import { formatCLP, formatFecha } from '@/lib/format/format';
@@ -26,6 +26,13 @@ export type CotizacionPdfData = {
     cantidad: number;
     descuento_porcentaje: number;
   }[];
+  /**
+   * Optional buffer of the ERSE logo image. Passed in from the route handler
+   * which reads `public/logo-erse.png` server-side. When null the PDF falls
+   * back to the text brand "ERSE ELECTRIC SPA" so it never breaks if the file
+   * is missing.
+   */
+  logo?: Buffer | string | null;
 };
 
 const COLORS = {
@@ -50,6 +57,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+    gap: 12,
+  },
+  brandLogoBlock: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    flex: 1,
+  },
+  brandLogo: {
+    width: 80,
+    height: 40,
+    objectFit: 'contain',
   },
   brandBlock: {
     flexDirection: 'column',
@@ -180,12 +199,22 @@ export function CotizacionPdf({ data }: { data: CotizacionPdfData }) {
     >
       <Page size="LETTER" style={styles.page}>
         <View style={styles.header}>
-          <View style={styles.brandBlock}>
-            <Text style={styles.brandName}>ERSE ELECTRIC SPA</Text>
-            <Text style={styles.brandLine}>RUT: 77.638.085-7</Text>
-            <Text style={styles.brandLine}>Email: ventas@erse.cl</Text>
-            <Text style={styles.brandLine}>Web: www.erse.cl</Text>
-            <Text style={styles.brandLine}>Teléfono / WhatsApp: +56 9 4805 4581</Text>
+          <View style={styles.brandLogoBlock}>
+            {data.logo ? (
+              // eslint-disable-next-line jsx-a11y/alt-text -- this is @react-pdf/renderer's Image, not HTML <img>; PDF images don't have alt text.
+              <Image src={data.logo} style={styles.brandLogo} />
+            ) : null}
+            <View style={styles.brandBlock}>
+              {data.logo ? null : (
+                <Text style={styles.brandName}>ERSE ELECTRIC SPA</Text>
+              )}
+              <Text style={styles.brandLine}>RUT: 77.638.085-7</Text>
+              <Text style={styles.brandLine}>Email: ventas@erse.cl</Text>
+              <Text style={styles.brandLine}>Web: www.erse.cl</Text>
+              <Text style={styles.brandLine}>
+                Teléfono / WhatsApp: +56 9 4805 4581
+              </Text>
+            </View>
           </View>
           <View style={styles.quoteBox}>
             <Text style={styles.quoteBoxRut}>R.U.T.: 77.638.085-7</Text>

@@ -10,6 +10,8 @@ import { logoutAction } from '@/app/login/actions';
 const PRIMARY_LINKS = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/cotizaciones', label: 'Cotizaciones' },
+  { href: '/clientes', label: 'Clientes' },
+  { href: '/productos', label: 'Productos' },
 ] as const;
 
 export function AppNav({

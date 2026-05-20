@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useActionState } from 'react';
-import { Check, ChevronsUpDown, Plus, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, FileClock, Plus, Trash2 } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -15,6 +15,14 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -22,7 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { IVA_RATE, computeTotals, lineTotal } from '@/lib/cotizaciones/totals';
-import { formatCLP } from '@/lib/format/format';
+import { formatCLP, formatFecha } from '@/lib/format/format';
 
 export type QuoteFormState = { error: string } | undefined;
 export type QuoteFormAction = (
@@ -58,6 +66,14 @@ export type QuoteFormInitial = {
   items: ItemRow[];
 };
 
+export type PreviousQuote = {
+  id: string;
+  numero: number;
+  fecha: string;
+  cliente_razon_social: string;
+  total: number;
+};
+
 const EMPTY_ITEM: ItemRow = {
   codigo_sku: '',
   descripcion: '',
@@ -77,6 +93,7 @@ const DEFAULT_INITIAL: QuoteFormInitial = {
 export function QuoteForm({
   clientes,
   productos,
+  previousQuotes = [],
   action,
   submitLabel,
   initial = DEFAULT_INITIAL,
@@ -84,6 +101,7 @@ export function QuoteForm({
 }: {
   clientes: Cliente[];
   productos: Producto[];
+  previousQuotes?: PreviousQuote[];
   action: QuoteFormAction;
   submitLabel: string;
   initial?: QuoteFormInitial;
@@ -151,6 +169,12 @@ export function QuoteForm({
       <input type="hidden" name="condicion_pago" value={condicionPago} />
       <input type="hidden" name="notas" value={notas} />
       <input type="hidden" name="items" value={JSON.stringify(filledItems)} />
+
+      {previousQuotes.length > 0 ? (
+        <div className="flex justify-end">
+          <PreviousQuotePicker quotes={previousQuotes} disabled={isPending} />
+        </div>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
@@ -512,5 +536,89 @@ function ProductoPicker({
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function PreviousQuotePicker({
+  quotes,
+  disabled,
+}: {
+  quotes: PreviousQuote[];
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [query, setQuery] = React.useState('');
+
+  // Client-side filter is fine while the list is small (<200 entries per the
+  // page's PICKER_LIMIT). Switch to server search when this slows down — see
+  // [[project-cotizaciones-haulmer-patterns]].
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q === '') return quotes;
+    return quotes.filter(
+      (item) =>
+        String(item.numero).includes(q) ||
+        item.cliente_razon_social.toLowerCase().includes(q),
+    );
+  }, [quotes, query]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button type="button" variant="outline" size="sm" disabled={disabled}>
+            <FileClock />
+            Basar en una cotización anterior
+          </Button>
+        }
+      />
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Cotizaciones emitidas previamente</DialogTitle>
+          <DialogDescription>
+            Elige una para precargar este formulario con sus datos. Al guardar se crea una
+            cotización nueva con su propio correlativo — la original no se modifica.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Input
+          placeholder="Buscar por número o razón social…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          autoFocus
+        />
+
+        <div className="max-h-[55vh] overflow-y-auto">
+          {filtered.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No hay cotizaciones que coincidan.
+            </p>
+          ) : (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {filtered.map((q) => (
+                <li key={q.id}>
+                  <Link
+                    href={`/cotizaciones/nueva?from=${q.id}`}
+                    className="flex items-center gap-3 px-3 py-2 transition-colors hover:bg-muted/50"
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="w-16 font-mono text-sm font-medium">Nº {q.numero}</span>
+                    <span className="flex-1 truncate text-sm">{q.cliente_razon_social}</span>
+                    <span className="text-xs text-muted-foreground">{formatFecha(q.fecha)}</span>
+                    <span className="ml-2 w-24 text-right font-mono text-sm">
+                      ${formatCLP(q.total)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {filtered.length} de {quotes.length} cotizaciones
+        </p>
+      </DialogContent>
+    </Dialog>
   );
 }

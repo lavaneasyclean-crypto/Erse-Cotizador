@@ -3,8 +3,13 @@ import { redirect } from 'next/navigation';
 
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { QuoteForm, type QuoteFormInitial } from '@/components/cotizaciones/quote-form';
+import {
+  QuoteForm,
+  type PreviousQuote,
+  type QuoteFormInitial,
+} from '@/components/cotizaciones/quote-form';
 import { createClient } from '@/lib/supabase/server';
+import { computeTotals } from '@/lib/cotizaciones/totals';
 
 import { createCotizacionAction } from './actions';
 
@@ -20,6 +25,10 @@ const DEFAULT_INITIAL: QuoteFormInitial = {
   items: [],
 };
 
+// Cap the picker list so it stays responsive without paging. When this gets
+// uncomfortable we'll add server-side search per the Haulmer pattern memory.
+const PICKER_LIMIT = 200;
+
 export default async function NuevaCotizacionPage({
   searchParams,
 }: {
@@ -33,7 +42,7 @@ export default async function NuevaCotizacionPage({
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const [{ data: clientes }, { data: productos }] = await Promise.all([
+  const [{ data: clientes }, { data: productos }, { data: pastQuotes }] = await Promise.all([
     supabase
       .from('clientes')
       .select('rut, razon_social, condicion_de_pago')
@@ -42,7 +51,30 @@ export default async function NuevaCotizacionPage({
       .from('productos')
       .select('codigo_sku, descripcion, precio_neto')
       .order('descripcion', { ascending: true }),
+    supabase
+      .from('cotizaciones')
+      .select(
+        'id, numero, fecha, clientes(razon_social), cotizacion_items(precio_unitario, cantidad, descuento_porcentaje)',
+      )
+      .order('numero', { ascending: false })
+      .limit(PICKER_LIMIT),
   ]);
+
+  const previousQuotes: PreviousQuote[] = (pastQuotes ?? [])
+    .filter((q) => q.id !== from)
+    .map((q) => ({
+      id: q.id,
+      numero: q.numero,
+      fecha: q.fecha,
+      cliente_razon_social: q.clientes?.razon_social ?? 'Sin cliente',
+      total: computeTotals(
+        (q.cotizacion_items ?? []).map((item) => ({
+          precioUnitario: item.precio_unitario,
+          cantidad: item.cantidad,
+          descuentoPorcentaje: item.descuento_porcentaje,
+        })),
+      ).total,
+    }));
 
   let initial: QuoteFormInitial = DEFAULT_INITIAL;
   let sourceNumero: number | null = null;
@@ -76,7 +108,7 @@ export default async function NuevaCotizacionPage({
   }
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-4xl flex-col gap-6 p-6">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
       <Card>
         <CardHeader>
           <CardTitle>Nueva cotización</CardTitle>
@@ -95,9 +127,17 @@ export default async function NuevaCotizacionPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/*
+            The `key` forces QuoteForm to unmount + remount when the `?from`
+            query changes. Without it, navigating from /nueva to
+            /nueva?from=X keeps the same React tree and useState ignores
+            the new `initial` prop.
+          */}
           <QuoteForm
+            key={from ?? 'fresh'}
             clientes={clientes ?? []}
             productos={productos ?? []}
+            previousQuotes={previousQuotes}
             action={createCotizacionAction}
             submitLabel={sourceNumero ? 'Guardar nueva cotización' : 'Guardar cotización'}
             initial={initial}

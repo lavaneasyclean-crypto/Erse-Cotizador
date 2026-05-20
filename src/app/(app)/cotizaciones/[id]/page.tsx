@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
-import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -16,25 +15,8 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { computeTotals, lineTotal } from '@/lib/cotizaciones/totals';
 import { formatCLP, formatFecha } from '@/lib/format/format';
-import type { EstadoCotizacion } from '@/lib/supabase/types';
 
-const ESTADO_LABEL: Record<EstadoCotizacion, string> = {
-  borrador: 'Borrador',
-  enviada: 'Enviada',
-  aprobada: 'Aprobada',
-  rechazada: 'Rechazada',
-};
-
-const ESTADO_CLASSES: Record<EstadoCotizacion, string> = {
-  borrador:
-    'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300',
-  enviada:
-    'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300',
-  aprobada:
-    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400',
-  rechazada:
-    'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-400',
-};
+import { EstadoSelector } from './estado-selector';
 
 export default async function CotizacionDetailPage({
   params,
@@ -61,11 +43,17 @@ export default async function CotizacionDetailPage({
   if (error) throw new Error(error.message);
   if (!cotizacion) notFound();
 
-  const { data: vendedor } = await supabase
-    .from('profiles')
-    .select('nombre_completo')
-    .eq('id', cotizacion.vendedor_id)
-    .maybeSingle();
+  const [{ data: vendedor }, { data: viewerProfile }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('nombre_completo')
+      .eq('id', cotizacion.vendedor_id)
+      .maybeSingle(),
+    supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+  ]);
+
+  const viewerIsAdmin = viewerProfile?.is_admin ?? false;
+  const canEditEstado = cotizacion.vendedor_id === user.id || viewerIsAdmin;
 
   const items = cotizacion.cotizacion_items ?? [];
   const totals = computeTotals(
@@ -83,9 +71,11 @@ export default async function CotizacionDetailPage({
           ← Volver al listado
         </Link>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={ESTADO_CLASSES[cotizacion.estado]}>
-            {ESTADO_LABEL[cotizacion.estado]}
-          </Badge>
+          <EstadoSelector
+            cotizacionId={cotizacion.id}
+            current={cotizacion.estado}
+            canEdit={canEditEstado}
+          />
           <Link
             href={`/cotizaciones/nueva?from=${cotizacion.id}`}
             className={buttonVariants({ variant: 'outline' })}
