@@ -8,26 +8,31 @@ const rut = z
   .string()
   .trim()
   .min(1, { message: 'El RUT es obligatorio' })
+  .max(20, { message: 'RUT demasiado largo' })
   .refine((value) => isValidRut(value), {
     message: 'RUT inválido (verifica el dígito verificador)',
   })
   .transform((value) => normalizeRut(value));
 
-// Optional free-text field: trims, then converts empty string to null so the
-// DB stores SQL NULL instead of an empty string. `nullish()` makes the key
-// itself optional in the object — missing/null/undefined all map to null.
-const optionalText = z
-  .string()
-  .nullish()
-  .transform((v) => {
-    if (v == null) return null;
-    const trimmed = v.trim();
-    return trimmed === '' ? null : trimmed;
-  });
+// Optional free-text field: trims, converts empty string to null so the DB
+// stores SQL NULL instead of an empty string, and caps the length so a
+// malicious or accidental megabyte string can't reach the database.
+function optionalText(max: number) {
+  return z
+    .string()
+    .max(max, { message: `Máximo ${max} caracteres` })
+    .nullish()
+    .transform((v) => {
+      if (v == null) return null;
+      const trimmed = v.trim();
+      return trimmed === '' ? null : trimmed;
+    });
+}
 
 // Optional email: empty string → null; non-empty must validate.
 const optionalEmail = z
   .string()
+  .max(160, { message: 'Email demasiado largo' })
   .nullish()
   .transform((v, ctx) => {
     if (v == null) return null;
@@ -46,14 +51,15 @@ export const createClienteSchema = z.object({
   razon_social: z
     .string()
     .trim()
-    .min(1, { message: 'La razón social es obligatoria' }),
-  persona: optionalText,
-  direccion_despacho: optionalText,
-  condicion_de_pago: optionalText,
-  ciudad: optionalText,
-  contacto: optionalText,
+    .min(1, { message: 'La razón social es obligatoria' })
+    .max(200, { message: 'Máximo 200 caracteres' }),
+  persona: optionalText(120),
+  direccion_despacho: optionalText(300),
+  condicion_de_pago: optionalText(80),
+  ciudad: optionalText(80),
+  contacto: optionalText(80),
   email: optionalEmail,
-  giro: optionalText,
+  giro: optionalText(200),
 });
 
 export type CreateClienteInput = z.infer<typeof createClienteSchema>;

@@ -1,29 +1,11 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { renderToBuffer } from '@react-pdf/renderer';
 
 import { createClient } from '@/lib/supabase/server';
 import { ManualPdf } from '@/lib/pdf/manual';
 import { contentDispositionInline } from '@/lib/pdf/filename';
+import { loadLogo } from '@/lib/pdf/load-logo';
 
 export const runtime = 'nodejs';
-
-const LOGO_CANDIDATES = ['logo-erse.png', 'ERSE_7.png', 'erse-logo.png', 'logo.png'];
-let cachedLogo: Buffer | null | undefined;
-
-async function loadLogo(): Promise<Buffer | null> {
-  if (cachedLogo !== undefined) return cachedLogo;
-  for (const name of LOGO_CANDIDATES) {
-    try {
-      cachedLogo = await readFile(path.join(process.cwd(), 'public', name));
-      return cachedLogo;
-    } catch {
-      // try next candidate
-    }
-  }
-  cachedLogo = null;
-  return null;
-}
 
 export async function GET() {
   const supabase = await createClient();

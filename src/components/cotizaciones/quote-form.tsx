@@ -51,6 +51,14 @@ export type Producto = {
 };
 
 export type ItemRow = {
+  /**
+   * Client-only stable id so React's reconciliation tracks rows correctly
+   * when items are added or removed in the middle of the list. Optional on
+   * the input type because callers (server components hydrating `initial`)
+   * don't need to know about it; the form fills one in on mount. Stripped
+   * by the server Zod schema before insert.
+   */
+  _uiId?: string;
   codigo_sku: string;
   descripcion: string;
   precio_unitario: number;
@@ -74,20 +82,23 @@ export type PreviousQuote = {
   total: number;
 };
 
-const EMPTY_ITEM: ItemRow = {
-  codigo_sku: '',
-  descripcion: '',
-  precio_unitario: 0,
-  cantidad: 1,
-  descuento_porcentaje: 0,
-};
+function makeEmptyItem(): ItemRow {
+  return {
+    _uiId: crypto.randomUUID(),
+    codigo_sku: '',
+    descripcion: '',
+    precio_unitario: 0,
+    cantidad: 1,
+    descuento_porcentaje: 0,
+  };
+}
 
 const DEFAULT_INITIAL: QuoteFormInitial = {
   cliente_rut: '',
   vencimiento: '2 días hábiles',
   condicion_pago: 'Contado',
   notas: '',
-  items: [EMPTY_ITEM],
+  items: [],
 };
 
 export function QuoteForm({
@@ -116,8 +127,12 @@ export function QuoteForm({
   const [vencimiento, setVencimiento] = React.useState<string>(initial.vencimiento);
   const [condicionPago, setCondicionPago] = React.useState<string>(initial.condicion_pago);
   const [notas, setNotas] = React.useState<string>(initial.notas);
-  const [items, setItems] = React.useState<ItemRow[]>(
-    initial.items.length > 0 ? initial.items : [EMPTY_ITEM],
+  // Hydrate initial items with a stable client-only id. Items coming from
+  // /nueva?from=X never have one because the DB doesn't store it.
+  const [items, setItems] = React.useState<ItemRow[]>(() =>
+    initial.items.length > 0
+      ? initial.items.map((item) => ({ ...item, _uiId: item._uiId ?? crypto.randomUUID() }))
+      : [makeEmptyItem()],
   );
   const [globalDcto, setGlobalDcto] = React.useState<number>(0);
 
@@ -134,7 +149,7 @@ export function QuoteForm({
   }
 
   function addItem() {
-    setItems((prev) => [...prev, EMPTY_ITEM]);
+    setItems((prev) => [...prev, makeEmptyItem()]);
   }
 
   function removeItem(index: number) {
@@ -253,8 +268,10 @@ export function QuoteForm({
 
         <div className="space-y-3">
           {items.map((item, index) => (
+            // Stable key — never `index` — so removing a middle row keeps
+            // remaining inputs' state attached to their original row.
             <ItemEditor
-              key={index}
+              key={item._uiId}
               index={index}
               item={item}
               productos={productos}

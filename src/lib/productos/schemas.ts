@@ -17,8 +17,16 @@ const precio = z
   });
 
 export const createProductoSchema = z.object({
-  codigo_sku: z.string().trim().min(1, { message: 'El código SKU es obligatorio' }),
-  descripcion: z.string().trim().min(1, { message: 'La descripción es obligatoria' }),
+  codigo_sku: z
+    .string()
+    .trim()
+    .min(1, { message: 'El código SKU es obligatorio' })
+    .max(80, { message: 'Código demasiado largo' }),
+  descripcion: z
+    .string()
+    .trim()
+    .min(1, { message: 'La descripción es obligatoria' })
+    .max(500, { message: 'Descripción demasiado larga' }),
   precio_neto: precio,
 });
 

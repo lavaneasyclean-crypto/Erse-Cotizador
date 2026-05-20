@@ -1,35 +1,11 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { renderToBuffer } from '@react-pdf/renderer';
 
 import { createClient } from '@/lib/supabase/server';
 import { CotizacionPdf, type CotizacionPdfData } from '@/lib/pdf/cotizacion-pdf';
 import { contentDispositionInline } from '@/lib/pdf/filename';
+import { loadLogo } from '@/lib/pdf/load-logo';
 
 export const runtime = 'nodejs';
-
-/**
- * Load the ERSE logo from disk at request time. We cache the result in module
- * scope so each PDF render skips the disk read. The file is optional — if it
- * doesn't exist the PDF falls back to a text brand. We try a few common
- * filenames in `public/` so the user can drop the file with any of them.
- */
-const LOGO_CANDIDATES = ['logo-erse.png', 'ERSE_7.png', 'erse-logo.png', 'logo.png'];
-let cachedLogo: Buffer | null | undefined;
-async function loadLogo(): Promise<Buffer | null> {
-  if (cachedLogo !== undefined) return cachedLogo;
-  for (const name of LOGO_CANDIDATES) {
-    try {
-      const buffer = await readFile(path.join(process.cwd(), 'public', name));
-      cachedLogo = buffer;
-      return buffer;
-    } catch {
-      // try next candidate
-    }
-  }
-  cachedLogo = null;
-  return null;
-}
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

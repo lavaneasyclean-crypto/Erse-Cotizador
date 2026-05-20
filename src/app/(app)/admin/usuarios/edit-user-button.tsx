@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/password-input';
 
 import { updateUserAction, type CreateUserResult } from './actions';
 
@@ -73,10 +74,9 @@ export function EditUserButton({
 
           <div className="space-y-2">
             <Label htmlFor={`password-${userId}`}>Nueva contraseña</Label>
-            <Input
+            <PasswordInput
               id={`password-${userId}`}
               name="password"
-              type="text"
               autoComplete="new-password"
               minLength={8}
               disabled={isPending}
