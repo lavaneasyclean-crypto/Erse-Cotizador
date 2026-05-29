@@ -1,0 +1,18 @@
+# Netlify build configuration for ERSE Cotizaciones.
+#
+# Netlify auto-detects Next.js and installs @netlify/plugin-nextjs, which
+# handles the publish directory, serverless functions, and edge runtime.
+# We only pin the Node version (Next 16 needs a modern Node) and the build
+# command here.
+#
+# Environment variables are NOT defined here — set them in the Netlify UI
+# (Site settings → Environment variables) so secrets never land in git:
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY
+#   SUPABASE_SERVICE_ROLE_KEY
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"

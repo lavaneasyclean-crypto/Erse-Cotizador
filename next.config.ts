@@ -31,6 +31,15 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The PDF routes read public/ERSE_7.png at runtime via a *dynamic* path
+  // (loadLogo loops over candidate filenames). Next's static file tracer
+  // can't see a dynamic readFile, so on serverless hosts (Netlify) the file
+  // wouldn't be bundled into the function and the logo would silently fall
+  // back to the text brand. Force-include the logo in those functions.
+  outputFileTracingIncludes: {
+    '/cotizaciones/[id]/pdf': ['./public/ERSE_7.png'],
+    '/manual': ['./public/ERSE_7.png'],
+  },
   async headers() {
     return [
       {
